@@ -1,176 +1,134 @@
-import streamlit as st
-import requests
-import json
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎛️ EuroAffiliate Ultimate</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .form-group { display: flex; gap: 15px; margin-bottom: 20px; }
+        input, select, button { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+        input { flex: 2; }
+        select { flex: 1; }
+        button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background-color: #2980b9; }
+        .results-box { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .column { background: #f9f9f9; padding: 20px; border-radius: 6px; border-left: 4px solid #3498db; }
+        .keyword-item { padding: 8px 0; border-bottom: 1px solid #eee; font-weight: 500; }
+    </style>
+</head>
+<body>
 
-# Configuração da Página
-st.set_page_config(page_title="EuroAffiliate Ultimate", page_icon="🎛️", layout="wide")
-
-st.title("🎛️ EuroAffiliate Ultimate - Painel de Controle de Alta Conversão")
-st.markdown("---")
-
-# Abas para organizar todas as funções que conversamos
-aba1, aba2, aba3 = st.tabs([
-    "🔑 Palavras-Chave de Ouro", 
-    "🕵️ Espião Técnico & Subtítulos", 
-    "🔗 Rastreador de Links do Rival"
-])
-
-# ----------------- ABA 1: PALAVRAS-CHAVE DE OURO & PERGUNTAS -----------------
-with aba1:
-    st.header("1. Mineração de Termos de Compra e Dúvidas (Mercado Europeu)")
+<div class="container">
+    <h1>🎛️ EuroAffiliate Ultimate - Extrator de Palavras-Chave de Ouro</h1>
     
-    col1, col2 = st.columns(2)
-    with col1:
-        produto = st.text_input("Digite o produto ou nicho base (Ex: Nourix, coffee machine):", "", key="prod")
-    with col2:
-        mercado = st.selectbox(
-            "Selecione o Mercado Alvo:",
-            options=["en", "es", "de", "fr", "it"],
-            format_func=lambda x: {"en": "Reino Unido / Global (EN)", "es": "Espanha (ES)", "de": "Alemanha (DE)", "fr": "França (FR)", "it": "Itália (IT)"}[x],
-            key="merc"
-        )
-    
-    if st.button("Gerar Inteligência de Conteúdo", key="btn_palavras"):
-        if produto:
-            modificadores = {
-                "en": ["best", "review", "buy", "price", "how to", "is it safe", "side effects"],
-                "es": ["mejor", "opiniones", "comprar", "precio", "como usar", "funciona", "contraindicaciones"],
-                "de": ["beste", "test", "kaufen", "preis", "wie funktioniert", "erfahrungen", "nebenwirkungen"],
-                "fr": ["meilleur", "avis", "acheter", "prix", "comment utiliser", "danger", "effets secondaires"],
-                "it": ["migliore", "recensione", "comprare", "prezzo", "come assumere", "funziona", "effetti collaterali"]
-            }
-            
-            sugestoes_finais = set()
-            # User-agent atualizado simulando o navegador Chrome perfeitamente para evitar bloqueio técnico
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9'
-            }
-            
-            with st.spinner("Extraindo variações comerciais diretas do Google..."):
-                # URL alternativa mais estável usando 'toolbar' para evitar recusa de conexão
-                url_pura = f"https://google.com{mercado}&q={produto}"
-                try:
-                    res = requests.get(url_pura, headers=headers, timeout=5)
-                    if res.status_code == 200:
-                        # O client=toolbar retorna XML, extraímos as sugestões de forma segura
-                        soup_xml = BeautifulSoup(res.text, 'xml')
-                        for suggestion in soup_xml.find_all('suggestion'):
-                            sugestoes_finais.add(suggestion.get('data'))
-                except Exception:
-                    pass # Evita travar se uma requisição falhar
-                
-                # Busca variações com modificadores de compra e perguntas
-                for mod in modificadores[mercado]:
-                    q1 = f"{produto} {mod}"
-                    q2 = f"{mod} {produto}"
-                    
-                    for q in [q1, q2]:
-                        url_mod = f"https://google.com{mercado}&q={q}"
-                        try:
-                            res_mod = requests.get(url_mod, headers=headers, timeout=5)
-                            if res_mod.status_code == 200:
-                                soup_xml = BeautifulSoup(res_mod.text, 'xml')
-                                for suggestion in soup_xml.find_all('suggestion'):
-                                    sugestoes_finais.add(suggestion.get('data'))
-                        except Exception:
-                            continue
-            
-            if sugestoes_finais:
-                st.success(f"Sucesso! Encontramos {len(sugestoes_finais)} ideias valiosas para estruturar sua estratégia.")
-                
-                lista_ordenada = sorted(list(sugestoes_finais))
-                col_esq, col_dir = st.columns(2)
-                meio = len(lista_ordenada) // 2
-                
-                with col_esq:
-                    st.subheader("🎯 Termos de Intenção Comercial / Dúvidas")
-                    for termo in lista_ordenada[:meio]:
-                        st.write(f"• **{termo}**")
-                with col_dir:
-                    st.subheader("🎯 Mais Variações Encontradas")
-                    for termo in lista_ordenada[meio:]:
-                        st.write(f"• **{termo}**")
-            else:
-                st.error("O Google recusou a conexão temporariamente por excesso de acessos do servidor. Tente mudar o termo de busca ou aguarde um instante.")
-        else:
-            st.warning("Por favor, digite o nome de um produto!")
+    <div class="form-group">
+        <input type="text" id="produto" placeholder="Digite o produto ou nicho base (Ex: Nourix, coffee machine)">
+        <select id="mercado">
+            <option value="en">Reino Unido / Global (EN)</option>
+            <option value="fr" selected>França (FR)</option>
+            <option value="es">Espanha (ES)</option>
+            <option value="de">Alemanha (DE)</option>
+            <option value="it">Itália (IT)</option>
+        </select>
+        <button onclick="buscarPalavras()">Gerar Inteligência</button>
+    </div>
 
-# ----------------- ABA 2: ESPIÃO TÉCNICO & SUBTÍTULOS -----------------
-with aba2:
-    st.header("2. Anatomia de Conteúdo do Concorrente")
-    url_concorrente = st.text_input("Cole a URL do rival europeu aqui:", "https://", key="url_espiao")
-    
-    if st.button("Dissecá-lo", key="btn_espiao"):
-        if url_concorrente and url_concorrente != "https://":
-            try:
-                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-                resposta = requests.get(url_concorrente, headers=headers, timeout=10)
-                
-                if resposta.status_code == 200:
-                    soup = BeautifulSoup(resposta.text, 'html.parser')
-                    
-                    st.success(f"Status: 200 OK | Servidor Detectado: {resposta.headers.get('Server', 'Nginx/Cloudflare alternative')}")
-                    
-                    titulo = soup.title.string if soup.title else "Sem título"
-                    st.markdown(f"#### 📋 Título de SEO ({len(titulo)} caracteres):\n> **{titulo}**")
-                    if len(titulo) > 60:
-                        st.warning("⚠️ Este título está muito longo! O Google pode cortar no navegador.")
-                    
-                    meta_desc = soup.find('meta', attrs={'name': 'description'})
-                    desc_conteudo = meta_desc['content'] if meta_desc else "Ausente"
-                    st.markdown(f"#### 📑 Descrição de SEO:\n> *{desc_conteudo}*")
-                    
-                    st.markdown("#### 🧱 Esqueleto do Artigo (Subtítulos H2 e H3):")
-                    subtitulos = soup.find_all(['h2', 'h3'])
-                    for sub in subtitulos[:20]:
-                        st.write(f"**[{sub.name.upper()}]** {sub.text.strip()}")
-                else:
-                    st.error(f"Erro ao acessar o site. Código HTTP: {resposta.status_code}")
-            except Exception as e:
-                st.error(f"Não foi possível ler este domínio. Detalhes: {e}")
+    <div class="results-box">
+        <div>
+            <h3>🎯 Termos com Intenção de Compra</h3>
+            <div id="col-comercial" class="column">Digite um termo para começar...</div>
+        </div>
+        <div>
+            <h3>❓ Dúvidas e Variações</h3>
+            <div id="col-duvidas" class="column">Digite um termo para começar...</div>
+        </div>
+    </div>
+</div>
 
-# ----------------- ABA 3: RASTREADOR DE LINKS -----------------
-with aba3:
-    st.header("3. Desmascarar Links de Afiliados do Rival")
-    st.caption("Esta função lê a página do concorrente e encontra para onde ele direciona os cliques de vendas.")
-    
-    url_links = st.text_input("Cole a mesma URL do concorrente para mapear os links:", "https://", key="url_links")
-    
-    if st.button("Rastrear Links Externos", key="btn_links"):
-        if url_links and url_links != "https://":
-            try:
-                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-                resposta = requests.get(url_links, headers=headers, timeout=10)
-                
-                if resposta.status_code == 200:
-                    soup = BeautifulSoup(resposta.text, 'html.parser')
-                    dominio_base = urlparse(url_links).netloc
-                    
-                    links_externos = []
-                    for a_tag in soup.find_all('a', href=True):
-                        href = a_tag['href']
-                        url_completa = urljoin(url_links, href)
-                        dominio_destino = urlparse(url_completa).netloc
-                        
-                        if dominio_destino and dominio_destino != dominio_base:
-                            texto_link = a_tag.text.strip() or "[Imagem ou Botão]"
-                            links_externos.append((texto_link, url_completa))
-                    
-                    if links_externos:
-                        st.success(f"Encontramos {len(links_externos)} links saindo dessa página!")
-                        for texto, link_ext in links_externos:
-                            plataforma = "Desconhecida / Direta"
-                            if "amazon" in link_ext: plataforma = "📦 Amazon Affiliates"
-                            elif "awin" in link_ext: plataforma = "🌐 Awin Network"
-                            elif "clickbank" in link_ext: plataforma = "💥 ClickBank"
-                            
-                            st.write(f"🔗 **Texto do Botão:** `{texto}`")
-                            st.write(f"➡️ **Destino Real:** `{link_ext}` | **Filtro:** {plataforma}")
-                            st.markdown("---")
-                    else:
-                        st.warning("Não foram encontrados links direcionando para fora deste site.")
-            except Exception as e:
-                st.error(f"Erro ao analisar links: {e}")
+<script>
+async function consultarGoogle(termo, mercado) {
+    // Usando JSONP alternativo para evitar bloqueios de CORS e IP do servidor
+    const url = `https://google.com{mercado}&q=${encodeURIComponent(termo)}`;
+    try {
+        // Criamos uma ponte técnica usando uma ferramenta que permite carregar o dado direto no navegador
+        const resposta = await fetch(`https://allorigins.win{encodeURIComponent(url)}`);
+        if (resposta.ok) {
+            const json = await resposta.json();
+            const dados = JSON.parse(json.contents);
+            return dados[1] || []; // Retorna as sugestões reais
+        }
+    } catch (e) {
+        console.error("Erro na requisição:", e);
+    }
+    return [];
+}
+
+async function buscarPalavras() {
+    const produto = document.getElementById('produto').value.trim();
+    const mercado = document.getElementById('mercado').value;
+    const colComercial = document.getElementById('col-comercial');
+    const colDuvidas = document.getElementById('col-duvidas');
+
+    if (!produto) {
+        alert("Por favor, digite o nome de um produto!");
+        return;
+    }
+
+    colComercial.innerHTML = "Minerando o mercado europeu...";
+    colDuvidas.innerHTML = "Processando variações...";
+
+    const modificadores = {
+        "en": { comp: ["best", "review", "buy", "price"], duv: ["how to", "is it safe", "side effects"] },
+        "fr": { comp: ["meilleur", "avis", "acheter", "prix"], duv: ["comment utiliser", "danger", "effets secondaires"] },
+        "es": { comp: ["mejor", "opiniones", "comprar", "precio"], duv: ["como usar", "funciona", "contraindicaciones"] },
+        "de": { comp: ["beste", "test", "kaufen", "preis"], duv: ["wie funktioniert", "erfahrungen", "nebenwirkungen"] },
+        "it": { comp: ["migliore", "recensione", "comprare", "prezzo"], duv: ["come assumere", "funziona", "effetti collaterali"] }
+    };
+
+    let resultadosComerciais = new Set();
+    let resultadosDuvidas = new Set();
+
+    // 1. Busca Termo Puro
+    const puras = await consultarGoogle(produto, mercado);
+    puras.forEach(t => resultadosComerciais.add(t));
+
+    // 2. Busca Termos Comerciais
+    for (let mod of modificadores[mercado].comp) {
+        const r1 = await consultarGoogle(`${produto} ${mod}`, mercado);
+        const r2 = await consultarGoogle(`${mod} ${produto}`, mercado);
+        r1.forEach(t => resultadosComerciais.add(t));
+        r2.forEach(t => resultadosComerciais.add(t));
+    }
+
+    // 3. Busca Dúvidas
+    for (let mod of modificadores[mercado].duv) {
+        const r1 = await consultarGoogle(`${produto} ${mod}`, mercado);
+        const r2 = await consultarGoogle(`${mod} ${produto}`, mercado);
+        r1.forEach(t => resultadosDuvidas.add(t));
+        r2.forEach(t => resultadosDuvidas.add(t));
+    }
+
+    // Renderizar na Tela
+    colComercial.innerHTML = "";
+    colDuvidas.innerHTML = "";
+
+    if (resultadosComerciais.size === 0 && resultadosDuvidas.size === 0) {
+        colComercial.innerHTML = "Nenhum dado retornado. Tente novamente.";
+        colDuvidas.innerHTML = "Nenhum dado retornado.";
+        return;
+    }
+
+    Array.from(resultadosComerciais).sort().forEach(termo => {
+        colComercial.innerHTML += `<div class="keyword-item">🎯 ${termo}</div>`;
+    });
+
+    Array.from(resultadosDuvidas).sort().forEach(termo => {
+        colDuvidas.innerHTML += `<div class="keyword-item">💡 ${termo}</div>`;
+    });
+}
+</script>
+</body>
+</html>
