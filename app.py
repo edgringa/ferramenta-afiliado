@@ -15,7 +15,7 @@
         button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background-color: #2980b9; }
         .results-box { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-        .column { background: #f9f9f9; padding: 20px; border-radius: 6px; border-left: 4px solid #3498db; }
+        .column { background: #f9f9f9; padding: 20px; border-radius: 6px; border-left: 4px solid #3498db; min-height: 100px; }
         .keyword-item { padding: 8px 0; border-bottom: 1px solid #eee; font-weight: 500; }
     </style>
 </head>
@@ -50,18 +50,19 @@
 
 <script>
 async function consultarGoogle(termo, mercado) {
-    // Usando JSONP alternativo para evitar bloqueios de CORS e IP do servidor
-    const url = `https://google.com{mercado}&q=${encodeURIComponent(termo)}`;
+    // URL real completa da API pública do Google Autocomplete para navegadores
+    const urlGoogle = `https://google.com{mercado}&q=${encodeURIComponent(termo)}`;
+    
     try {
-        // Criamos uma ponte técnica usando uma ferramenta que permite carregar o dado direto no navegador
-        const resposta = await fetch(`https://allorigins.win{encodeURIComponent(url)}`);
+        // Usa o proxy AllOrigins para injetar e buscar os dados de forma 100% limpa no seu próprio navegador
+        const resposta = await fetch(`https://allorigins.win{encodeURIComponent(urlGoogle)}`);
         if (resposta.ok) {
             const json = await resposta.json();
             const dados = JSON.parse(json.contents);
-            return dados[1] || []; // Retorna as sugestões reais
+            return dados[1] || []; // Retorna o array de sugestões textuais reais
         }
     } catch (e) {
-        console.error("Erro na requisição:", e);
+        console.error("Erro técnico na requisição:", e);
     }
     return [];
 }
@@ -111,7 +112,6 @@ async function buscarPalavras() {
         r2.forEach(t => resultadosDuvidas.add(t));
     }
 
-    // Renderizar na Tela
     colComercial.innerHTML = "";
     colDuvidas.innerHTML = "";
 
