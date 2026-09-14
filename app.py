@@ -34,7 +34,6 @@ with aba1:
     
     if st.button("Gerar Inteligência de Conteúdo", key="btn_palavras"):
         if produto:
-            # Modificadores de compra e modificadores de perguntas informativas
             modificadores = {
                 "en": ["best", "review", "buy", "price", "how to", "is it safe", "side effects"],
                 "es": ["mejor", "opiniones", "comprar", "precio", "como usar", "funciona", "contraindicaciones"],
@@ -44,41 +43,58 @@ with aba1:
             }
             
             sugestoes_finais = set()
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            # User-agent atualizado simulando o navegador Chrome perfeitamente para evitar bloqueio técnico
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9'
+            }
             
             with st.spinner("Extraindo variações comerciais diretas do Google..."):
-                # Busca o termo puro
+                # URL alternativa mais estável usando 'toolbar' para evitar recusa de conexão
                 url_pura = f"https://google.com{mercado}&q={produto}"
-                res = requests.get(url_pura, headers=headers)
-                if res.status_code == 200:
-                    for item in json.loads(res.text)[1]:
-                        sugestoes_finais.add(item)
+                try:
+                    res = requests.get(url_pura, headers=headers, timeout=5)
+                    if res.status_code == 200:
+                        # O client=toolbar retorna XML, extraímos as sugestões de forma segura
+                        soup_xml = BeautifulSoup(res.text, 'xml')
+                        for suggestion in soup_xml.find_all('suggestion'):
+                            sugestoes_finais.add(suggestion.get('data'))
+                except Exception:
+                    pass # Evita travar se uma requisição falhar
                 
                 # Busca variações com modificadores de compra e perguntas
                 for mod in modificadores[mercado]:
-                    url_mod = f"https://google.com{mercado}&q={produto} {mod}"
-                    url_mod_antes = f"https://google.com{mercado}&q={mod} {produto}"
+                    q1 = f"{produto} {mod}"
+                    q2 = f"{mod} {produto}"
                     
-                    for u in [url_mod, url_mod_antes]:
-                        res_mod = requests.get(u, headers=headers)
-                        if res_mod.status_code == 200:
-                            for item in json.loads(res_mod.text)[1]:
-                                sugestoes_finais.add(item)
+                    for q in [q1, q2]:
+                        url_mod = f"https://google.com{mercado}&q={q}"
+                        try:
+                            res_mod = requests.get(url_mod, headers=headers, timeout=5)
+                            if res_mod.status_code == 200:
+                                soup_xml = BeautifulSoup(res_mod.text, 'xml')
+                                for suggestion in soup_xml.find_all('suggestion'):
+                                    sugestoes_finais.add(suggestion.get('data'))
+                        except Exception:
+                            continue
             
-            st.success(f"Sucesso! Encontramos ideias valiosas para estruturar sua estratégia.")
-            
-            lista_ordenada = sorted(list(sugestoes_finais))
-            col_esq, col_dir = st.columns(2)
-            meio = len(lista_ordenada) // 2
-            
-            with col_esq:
-                st.subheader("🎯 Termos de Intenção Comercial / Dúvidas")
-                for termo in lista_ordenada[:meio]:
-                    st.write(f"• **{termo}**")
-            with col_dir:
-                st.subheader("🎯 Mais Variações Encontradas")
-                for termo in lista_ordenada[meio:]:
-                    st.write(f"• **{termo}**")
+            if sugestoes_finais:
+                st.success(f"Sucesso! Encontramos {len(sugestoes_finais)} ideias valiosas para estruturar sua estratégia.")
+                
+                lista_ordenada = sorted(list(sugestoes_finais))
+                col_esq, col_dir = st.columns(2)
+                meio = len(lista_ordenada) // 2
+                
+                with col_esq:
+                    st.subheader("🎯 Termos de Intenção Comercial / Dúvidas")
+                    for termo in lista_ordenada[:meio]:
+                        st.write(f"• **{termo}**")
+                with col_dir:
+                    st.subheader("🎯 Mais Variações Encontradas")
+                    for termo in lista_ordenada[meio:]:
+                        st.write(f"• **{termo}**")
+            else:
+                st.error("O Google recusou a conexão temporariamente por excesso de acessos do servidor. Tente mudar o termo de busca ou aguarde um instante.")
         else:
             st.warning("Por favor, digite o nome de um produto!")
 
@@ -96,21 +112,17 @@ with aba2:
                 if resposta.status_code == 200:
                     soup = BeautifulSoup(resposta.text, 'html.parser')
                     
-                    # Status e Servidor
                     st.success(f"Status: 200 OK | Servidor Detectado: {resposta.headers.get('Server', 'Nginx/Cloudflare alternative')}")
                     
-                    # Título de SEO
                     titulo = soup.title.string if soup.title else "Sem título"
                     st.markdown(f"#### 📋 Título de SEO ({len(titulo)} caracteres):\n> **{titulo}**")
                     if len(titulo) > 60:
                         st.warning("⚠️ Este título está muito longo! O Google pode cortar no navegador.")
                     
-                    # Meta Description
                     meta_desc = soup.find('meta', attrs={'name': 'description'})
                     desc_conteudo = meta_desc['content'] if meta_desc else "Ausente"
                     st.markdown(f"#### 📑 Descrição de SEO:\n> *{desc_conteudo}*")
                     
-                    # Estrutura H2 e H3
                     st.markdown("#### 🧱 Esqueleto do Artigo (Subtítulos H2 e H3):")
                     subtitulos = soup.find_all(['h2', 'h3'])
                     for sub in subtitulos[:20]:
@@ -143,7 +155,6 @@ with aba3:
                         url_completa = urljoin(url_links, href)
                         dominio_destino = urlparse(url_completa).netloc
                         
-                        # Verifica se o link joga para fora do próprio site do rival
                         if dominio_destino and dominio_destino != dominio_base:
                             texto_link = a_tag.text.strip() or "[Imagem ou Botão]"
                             links_externos.append((texto_link, url_completa))
@@ -151,7 +162,6 @@ with aba3:
                     if links_externos:
                         st.success(f"Encontramos {len(links_externos)} links saindo dessa página!")
                         for texto, link_ext in links_externos:
-                            # Tenta identificar plataformas famosas no link
                             plataforma = "Desconhecida / Direta"
                             if "amazon" in link_ext: plataforma = "📦 Amazon Affiliates"
                             elif "awin" in link_ext: plataforma = "🌐 Awin Network"
